@@ -20,8 +20,15 @@
 #ifndef skeleton_core_Application_hpp
 #define skeleton_core_Application_hpp
 
+#include <skeleton/core/ResourceHandler.hpp>
+
 #include <string>
 #include <vector>
+
+namespace sf {
+    class Texture;
+    class Font;
+}
 
 namespace skeleton {
 namespace core {
@@ -38,7 +45,13 @@ public:
     int exec();
 
 private:
+    void loadTextures(const std::string& filename);
+    void loadFonts(const std::string& filename);
+
+private:
     const std::vector<std::string> m_args;
+    ResourceHandler<std::string, sf::Texture> m_textureHandler;
+    ResourceHandler<std::string, sf::Font> m_fontHandler;
 };
 
 } // namespace core

@@ -20,22 +20,25 @@
 #include <skeleton/core/Application.hpp>
 
 #include <skeleton/core/ArgumentParser.hpp>
-#include <skeleton/core/ResourceHandler.hpp>
 
 #include <SFML/Graphics.hpp>
+#include <pugixml.hpp>
 
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <string>
+#include <map>
+#include <memory>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace skeleton {
 namespace core {
 
-static const size_t ID_TEXTURE_ICON {1000};
-static const size_t ID_FONT_TUFFY {1000};
+static const std::string ID_TEXTURE_ICON {"ID_TEXTURE_ICON"};
+static const std::string ID_FONT_TUFFY {"ID_FONT_TUFFY"};
 
 Application::Application() = default;
 
@@ -104,21 +107,18 @@ int Application::exec()
         }
     }
 
-    ResourceHandler<sf::Texture> textureHandler;
-    textureHandler.loadFromFile(ID_TEXTURE_ICON, "../assets/icons/sfml-icon.png");
-
-    ResourceHandler<sf::Font> fontHandler;
-    fontHandler.loadFromFile(ID_FONT_TUFFY, "../assets/fonts/Tuffy.ttf");
+    loadTextures("../config/textures.xml");
+    loadFonts("../config/fonts.xml");
 
     sf::RenderWindow window(videoMode, "skeleton", sf::Style::Close);
 
     {
-        sf::Image icon = textureHandler.get(ID_TEXTURE_ICON).copyToImage();
+        sf::Image icon = m_textureHandler.get(ID_TEXTURE_ICON).copyToImage();
         window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
     }
 
     sf::Sprite sprite;
-    sprite.setTexture(textureHandler.get(ID_TEXTURE_ICON));
+    sprite.setTexture(m_textureHandler.get(ID_TEXTURE_ICON));
     sprite.setScale(.5, .5);
     sprite.setOrigin(
         sprite.getLocalBounds().width / 2.,
@@ -130,7 +130,7 @@ int Application::exec()
     );
 
     sf::Text text;
-    text.setFont(fontHandler.get(ID_FONT_TUFFY));
+    text.setFont(m_fontHandler.get(ID_FONT_TUFFY));
     text.setString("SFML Skeleton");
     text.setCharacterSize(24);
     text.setColor(sf::Color::White);
@@ -162,6 +162,34 @@ int Application::exec()
     }
 
     return EXIT_SUCCESS;
+}
+
+void Application::loadTextures(const std::string& filename)
+{
+    pugi::xml_document doc;
+    doc.load_file(filename.c_str());
+
+    for (auto node: doc.child("textures"))
+    {
+        std::string id = node.attribute("id").value();
+        std::string src = node.attribute("src").value();
+        if (not m_textureHandler.load(id).loadFromFile(src))
+            throw std::runtime_error(src);
+    }
+}
+
+void Application::loadFonts(const std::string& filename)
+{
+  pugi::xml_document doc;
+  doc.load_file(filename.c_str());
+
+  for (auto node: doc.child("fonts"))
+  {
+    std::string id = node.attribute("id").value();
+    std::string src = node.attribute("src").value();
+    if (not m_fontHandler.load(id).loadFromFile(src))
+        throw std::runtime_error(src);
+  }
 }
 
 } // namespace core

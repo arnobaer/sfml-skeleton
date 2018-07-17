@@ -1,6 +1,6 @@
 /*
  *  sfml-skeleton
- *  Copyright (C) 2016  Bernhard Arnold
+ *  Copyright (C) 2018  Bernhard Arnold
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,41 +20,46 @@
 #ifndef skeleton_core_ResourceHandler_hpp
 #define skeleton_core_ResourceHandler_hpp
 
-#include <string>
 #include <map>
 #include <memory>
-
+#include <string>
+#include <iostream>
 namespace skeleton {
 namespace core {
 
-template<typename T>
+template<class Key, class T>
 class ResourceHandler
 {
 public:
-    virtual ~ResourceHandler();
+    T& load(const Key& key);
+    const T& get(const Key& key) const;
 
-    void loadFromFile(const size_t id, const std::string& filename);
-    const T& get(const size_t id) const;
+    void release(const Key& key);
 
 private:
-    std::map<size_t, std::shared_ptr<T>> m_resources;
+    std::map<Key, std::shared_ptr<T>> m_resources;
 };
 
-template<typename T>
-ResourceHandler<T>::~ResourceHandler() = default;
-
-template<typename T>
-void ResourceHandler<T>::loadFromFile(const size_t id, const std::string& filename)
+template<class Key, class T>
+T& ResourceHandler<Key, T>::load(const Key& key)
 {
-    std::shared_ptr<T> resource = std::make_shared<T>();
-    resource->loadFromFile(filename);
-    m_resources.emplace(id, resource);
+    if (not m_resources.count(key))
+        m_resources[key] = std::make_shared<T>();
+    return *m_resources.at(key);
 }
 
-template<typename T>
-const T& ResourceHandler<T>::get(const size_t id) const
+template<class Key, class T>
+const T& ResourceHandler<Key, T>::get(const Key& key) const
 {
-    return *m_resources.at(id);
+    return *m_resources.at(key);
+}
+
+template<class Key, class T>
+void ResourceHandler<Key, T>::release(const Key& key)
+{
+    auto it = m_resources.find(key);
+    if (m_resources.end() != it)
+        m_resources.erase(it);
 }
 
 } // namespace core
