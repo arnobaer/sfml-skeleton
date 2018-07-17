@@ -18,7 +18,7 @@ set(INCLUDES
 )
 
 set(SOURCES
-    "src/core/Application.cpp"
+    "src/skeleton/core/Application.cpp"
     "src/main.cpp"
 )
 
@@ -36,7 +36,7 @@ set(LIBRARIES
 
 include_directories(${INCLUDES})
 
-add_definitions(-std=c++11 -Wall -g)
+add_definitions(-std=c++14 -Wall -g)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

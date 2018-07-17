@@ -17,29 +17,45 @@
  *
  */
 
-#ifndef skeleton_core_Application_hpp
-#define skeleton_core_Application_hpp
+#ifndef skeleton_core_ResourceHandler_hpp
+#define skeleton_core_ResourceHandler_hpp
 
 #include <string>
-#include <vector>
+#include <map>
+#include <memory>
 
 namespace skeleton {
 namespace core {
 
-class Application
+template<typename T>
+class ResourceHandler
 {
 public:
-    Application();
-    Application(int argc, char* argv[]);
-    Application(const std::vector<std::string>& args);
-    virtual ~Application();
+    virtual ~ResourceHandler();
 
-    const std::vector<std::string>& getArgs() const noexcept;
-    int exec();
+    void loadFromFile(const size_t id, const std::string& filename);
+    const T& get(const size_t id) const;
 
 private:
-    const std::vector<std::string> m_args;
+    std::map<size_t, std::shared_ptr<T>> m_resources;
 };
+
+template<typename T>
+ResourceHandler<T>::~ResourceHandler() = default;
+
+template<typename T>
+void ResourceHandler<T>::loadFromFile(const size_t id, const std::string& filename)
+{
+    std::shared_ptr<T> resource = std::make_shared<T>();
+    resource->loadFromFile(filename);
+    m_resources.emplace(id, resource);
+}
+
+template<typename T>
+const T& ResourceHandler<T>::get(const size_t id) const
+{
+    return *m_resources.at(id);
+}
 
 } // namespace core
 } // namespace skeleton

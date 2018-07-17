@@ -19,49 +19,60 @@
 
 #include <skeleton/core/Application.hpp>
 
+#include <skeleton/core/ArgumentParser.hpp>
+#include <skeleton/core/ResourceHandler.hpp>
+
 #include <SFML/Graphics.hpp>
 
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 namespace skeleton {
 namespace core {
 
-std::vector<std::string> Application::m_args;
+static const size_t ID_TEXTURE_ICON {1000};
+static const size_t ID_FONT_TUFFY {1000};
 
 Application::Application() = default;
 
 Application::Application(int argc, char* argv[])
+: m_args(argv, argv + argc)
 {
-    m_args.clear();
-    for (int i = 0; i < argc; ++i)
-        m_args.emplace_back(argv[i]);
+}
+
+Application::Application(const std::vector<std::string>& args)
+: m_args(args)
+{
 }
 
 Application::~Application() = default;
 
-const std::vector<std::string>& Application::getArgs() noexcept
+const std::vector<std::string>& Application::getArgs() const noexcept
 {
-  return m_args;
+    return m_args;
 }
 
 int Application::exec()
 {
+    ArgumentParser parser(m_args);
+
     // dump help
-    if (std::find(m_args.begin(), m_args.end(), "-h") != m_args.end())
+    if (parser.hasArgument("-h"))
     {
         std::cout << "usage: " << m_args.at(0) << " [options]" << std::endl;
         std::cout << "options:" << std::endl;
-        std::cout << "  -m    show available fullscreen modes and exit" << std::endl;
-        std::cout << "  -h    show help and exit" << std::endl;
+        std::cout << "  -s <mode>  set fullscreen mode (default 800x600)" << std::endl;
+        std::cout << "  -m         show available fullscreen modes and exit" << std::endl;
+        std::cout << "  -h         show help and exit" << std::endl;
         return EXIT_SUCCESS;
     }
 
     // dump fullscrean modes
-    if (std::find(m_args.begin(), m_args.end(), "-m") != m_args.end())
+    if (parser.hasArgument("-m"))
     {
         std::cout << "fullscreen modes:" << std::endl;
         for (const auto& mode : sf::VideoMode::getFullscreenModes())
@@ -72,17 +83,42 @@ int Application::exec()
         return EXIT_SUCCESS;
     }
 
-    sf::RenderWindow window(sf::VideoMode(800, 600), "skeleton", sf::Style::Close);
+    sf::VideoMode videoMode(800, 600);
 
-    sf::Image icon;
-    icon.loadFromFile("../assets/icons/sfml-icon.png");
-    window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+    // set fullscrean mode
+    if (parser.hasArgument("-s"))
+    {
+        std::stringstream ss;
+        ss << parser.getArgument<std::string>("-s");
+        char x;
+        ss >> videoMode.width >> x >> videoMode.height;
+        const auto it = std::find(
+            sf::VideoMode::getFullscreenModes().begin(),
+            sf::VideoMode::getFullscreenModes().end(),
+            videoMode
+        );
+        if (sf::VideoMode::getFullscreenModes().end() == it)
+        {
+            std::cerr << "ERROR: no such video mode... " << ss.str() << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
 
-    sf::Texture texture;
-    texture.loadFromImage(icon);
+    ResourceHandler<sf::Texture> textureHandler;
+    textureHandler.loadFromFile(ID_TEXTURE_ICON, "../assets/icons/sfml-icon.png");
+
+    ResourceHandler<sf::Font> fontHandler;
+    fontHandler.loadFromFile(ID_FONT_TUFFY, "../assets/fonts/Tuffy.ttf");
+
+    sf::RenderWindow window(videoMode, "skeleton", sf::Style::Close);
+
+    {
+        sf::Image icon = textureHandler.get(ID_TEXTURE_ICON).copyToImage();
+        window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+    }
 
     sf::Sprite sprite;
-    sprite.setTexture(texture);
+    sprite.setTexture(textureHandler.get(ID_TEXTURE_ICON));
     sprite.setScale(.5, .5);
     sprite.setOrigin(
         sprite.getLocalBounds().width / 2.,
@@ -93,11 +129,8 @@ int Application::exec()
         window.getSize().y / 2. - 32.
     );
 
-    sf::Font font;
-    font.loadFromFile("../assets/fonts/Tuffy.ttf");
-
     sf::Text text;
-    text.setFont(font);
+    text.setFont(fontHandler.get(ID_FONT_TUFFY));
     text.setString("SFML Skeleton");
     text.setCharacterSize(24);
     text.setColor(sf::Color::White);
@@ -127,7 +160,6 @@ int Application::exec()
 
         window.display();
     }
-
 
     return EXIT_SUCCESS;
 }
